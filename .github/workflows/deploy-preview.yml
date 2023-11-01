@@ -1,0 +1,93 @@
+name: Deploy Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+  deploy-preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    if: ${{ github.event.action != 'closed' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Get branch name
+        id: branch-name
+        uses: tj-actions/branch-names@v7
+      
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+
+      - name: Install the Neon CLI
+        run: npm install -g neonctl
+
+      - name: Create a Neon branch
+        id: create-branch
+        uses: neondatabase/create-branch-action@v4
+        with:
+          project_id: ${{ secrets.NEON_PROJECT_ID }}
+          parent: main
+          branch_name: ${{ steps.branch-name.outputs.current_branch }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+
+      - run: npm install -g pnpm
+      - run: pnpm install
+
+      - name: Install Vercel CLI
+        run: |
+          npm install --global vercel@latest
+          vercel link --yes --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Set Database Environment on Vercel
+        run: echo ${{ steps.create-branch.outputs.db_url }} | vercel env add DATABASE_URL preview ${{ steps.branch-name.outputs.current_branch }} --yes --token=${{ secrets.VERCEL_TOKEN }} || true
+  
+      - name: Pull Vercel Environment Information
+        run: |
+          vercel env pull --yes --environment=preview --git-branch=${{ steps.branch-name.outputs.current_branch }} --token=${{ secrets.VERCEL_TOKEN }} .env
+
+      - name: Run Drizzle Migrate
+        run: |
+          SKIP_ENV_VALIDATION=true pnpm db:migrate
+
+      - name: Deploy Preview to Vercel
+        id: deploy
+        run: echo preview_url=$(vercel deploy --token=${{ secrets.VERCEL_TOKEN }}) >> $GITHUB_OUTPUT
+
+      - name: Comment on Pull Request
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            Vercel Preview URL :rocket: : ${{ steps.deploy.outputs.preview_url }}
+            Neon branch :elephant: : https://console.neon.tech/app/projects/${{ secrets.NEON_PROJECT_ID }}/branches/${{ steps.create-branch.outputs.branch_id }}
+
+  delete-preview:
+    name: Call for Preview Deletion
+    runs-on: ubuntu-latest
+    if: ${{ github.event.action == 'closed' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Get branch name
+        id: branch-name
+        uses: tj-actions/branch-names@v7
+
+      - name: Install Vercel CLI
+        run: |
+          npm install --global vercel@latest
+          vercel link --yes --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Delete Database Environment on Vercel
+        run: |
+          vercel env rm DATABASE_URL preview ${{ steps.branch-name.outputs.current_branch }} --yes --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Delete Neon Branch
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ secrets.NEON_PROJECT_ID }}
+          branch: ${{ steps.branch-name.outputs.current_branch }}
+          api_key: ${{ secrets.NEON_API_KEY }}

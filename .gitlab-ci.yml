@@ -1,0 +1,18 @@
+image: node:16.17.0
+
+before_script:
+  - npm set registry "https://registry.npmmirror.com"
+  - npm install -g pnpm
+  - pnpm install
+
+cache:
+  paths:
+    - node_modules
+
+stages:
+  - build
+
+build_job:
+  stage: build
+  script:
+    - SKIP_ENV_VALIDATION=true pnpm run build

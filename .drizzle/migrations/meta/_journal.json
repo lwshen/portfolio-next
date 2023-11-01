@@ -1,0 +1,20 @@
+{
+  "version": "5",
+  "dialect": "pg",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1696928917831,
+      "tag": "0000_curved_black_bolt",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1696992670207,
+      "tag": "0001_confused_nomad",
+      "breakpoints": true
+    }
+  ]
+}
