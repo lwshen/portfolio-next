@@ -9,5 +9,5 @@ RUN pnpm install
 RUN SKIP_ENV_VALIDATION=true pnpm build
 ENV NODE_ENV=production
 
-CMD ["pnpm", "run" ,"start"]
+CMD pnpm db:migrate && pnpm start
 EXPOSE 3000
