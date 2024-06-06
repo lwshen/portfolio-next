@@ -7,6 +7,7 @@ on:
 jobs:
   deploy-preview:
     name: Deploy Preview
+    permissions: write-all
     runs-on: ubuntu-latest
     if: ${{ github.event.action != 'closed' }}
     steps:
@@ -16,7 +17,7 @@ jobs:
       - name: Get branch name
         id: branch-name
         uses: tj-actions/branch-names@v7
-      
+
       - name: Use Node.js 18.x
         uses: actions/setup-node@v3
         with:
@@ -44,7 +45,7 @@ jobs:
 
       - name: Set Database Environment on Vercel
         run: echo ${{ steps.create-branch.outputs.db_url }} | vercel env add DATABASE_URL preview ${{ steps.branch-name.outputs.current_branch }} --yes --token=${{ secrets.VERCEL_TOKEN }} || true
-  
+
       - name: Pull Vercel Environment Information
         run: |
           vercel env pull --yes --environment=preview --git-branch=${{ steps.branch-name.outputs.current_branch }} --token=${{ secrets.VERCEL_TOKEN }} .env
@@ -63,6 +64,7 @@ jobs:
           message: |
             Vercel Preview URL :rocket: : ${{ steps.deploy.outputs.preview_url }}
             Neon branch :elephant: : https://console.neon.tech/app/projects/${{ secrets.NEON_PROJECT_ID }}/branches/${{ steps.create-branch.outputs.branch_id }}
+          comment_tag: preview-url
 
   delete-preview:
     name: Call for Preview Deletion
