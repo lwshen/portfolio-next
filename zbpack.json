@@ -1,4 +1,6 @@
 {
   "serverless": true,
-  "ignore_dockerfile": true
+  "ignore_dockerfile": true,
+  "build_command": "SKIP_ENV_VALIDATION=1 pnpm run build",
+  "start_command": "SKIP_ENV_VALIDATION=true pnpm run db:migrate && pnpm run start"
 }
